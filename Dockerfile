@@ -24,6 +24,9 @@ RUN npm run build
 
 # ---- serve: nginx ----
 FROM nginx:1.27-alpine
+LABEL org.opencontainers.image.source="https://github.com/sachin12-design/swingtodoomsday" \
+      org.opencontainers.image.title="Swing to Doomsday" \
+      org.opencontainers.image.description="Spider-Verse Marvel checklist counting down to Avengers: Doomsday"
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build --chmod=a+rX /app/dist /usr/share/nginx/html
 EXPOSE 80
