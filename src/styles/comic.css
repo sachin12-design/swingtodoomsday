@@ -1,0 +1,263 @@
+/* =================================================================
+   THE STYLE BIBLE, IN CSS.
+   Every Spider-Verse effect lives here and nowhere else. Retune the
+   entire site's look by editing this one file.
+   ================================================================= */
+
+:root {
+  /* Locked palette — 4 colors. Resist adding a 5th. */
+  --ink:      #0B0B0F;
+  --paper:    #F4F1EC;
+  --red:      #FF1744;
+  --cyan:     #00E5FF;
+  --violet:   #7C4DFF;
+  --yellow:   #FFD600;
+
+  --halftone-size: 6px;
+  --panel-border: 4px;
+
+  /* Spider-Verse animated Miles at 12fps against a 24fps world.
+     This variable is what makes motion read as "comic" not "web". */
+  --step-12: steps(12, end);
+}
+
+/* --- 1. PAPER GRAIN ------------------------------------------- */
+/* SVG turbulence baked into a data URI. ~0 bytes, infinite res. */
+.grain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: 0.16;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --- 2. BEN-DAY HALFTONE DOTS --------------------------------- */
+.halftone {
+  position: relative;
+}
+.halftone::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.22;
+  background-image: radial-gradient(circle, var(--ink) 1.1px, transparent 1.2px);
+  background-size: var(--halftone-size) var(--halftone-size);
+}
+.halftone--red::before  { background-image: radial-gradient(circle, var(--red) 1.3px, transparent 1.4px); opacity: .3; }
+.halftone--cyan::before { background-image: radial-gradient(circle, var(--cyan) 1.3px, transparent 1.4px); opacity: .3; }
+
+/* --- 3. CHROMATIC ABERRATION / MISREGISTRATION ---------------- */
+/* The CMYK print-offset look. Two flavours: text and box. */
+.chroma {
+  text-shadow:
+     2px 0 0 var(--red),
+    -2px 0 0 var(--cyan);
+}
+.chroma--heavy {
+  text-shadow:
+     4px 0 0 var(--red),
+    -4px 0 0 var(--cyan),
+     0 3px 0 var(--violet);
+}
+/* Animated version — jitters the offset on 12s. Use sparingly. */
+@keyframes chroma-drift {
+  0%   { text-shadow:  2px 0 0 var(--red), -2px 0 0 var(--cyan); }
+  50%  { text-shadow: -3px 0 0 var(--red),  3px 0 0 var(--cyan); }
+  100% { text-shadow:  2px 0 0 var(--red), -2px 0 0 var(--cyan); }
+}
+.chroma--live { animation: chroma-drift 1.2s var(--step-12) infinite; }
+
+/* --- 4. COMIC PANELS ------------------------------------------ */
+.panel {
+  position: relative;
+  background: var(--paper);
+  border: var(--panel-border) solid var(--ink);
+  box-shadow: 6px 6px 0 var(--ink);
+  overflow: hidden;
+}
+.panel--tilt-l { transform: rotate(-1.1deg); }
+.panel--tilt-r { transform: rotate(0.9deg); }
+.panel--hot   { box-shadow: 6px 6px 0 var(--red); }
+
+/* --- 5. DISPLAY TYPE ------------------------------------------ */
+.display {
+  font-family: 'Bangers', 'Archivo Black', Impact, sans-serif;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 0.92;
+}
+
+/* --- 6. SFX BURST (THWIP! BAM!) ------------------------------- */
+.sfx {
+  font-family: 'Bangers', Impact, sans-serif;
+  color: var(--yellow);
+  -webkit-text-stroke: 2px var(--ink);
+  paint-order: stroke fill;
+  display: inline-block;
+  transform: rotate(-8deg);
+  animation: sfx-pop 0.5s var(--step-12) both;
+}
+@keyframes sfx-pop {
+  0%   { transform: rotate(-8deg) scale(0.2); opacity: 0; }
+  60%  { transform: rotate(-8deg) scale(1.15); opacity: 1; }
+  100% { transform: rotate(-8deg) scale(1); opacity: 1; }
+}
+
+/* --- 7. CHARACTER MOTION, ANIMATED ON 2s ---------------------- */
+/* The single most important rule in this file. Characters move at
+   12fps while the UI moves at 60fps. That contrast IS the look. */
+@keyframes bob {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-10px); }
+  100% { transform: translateY(0); }
+}
+.on-twos { animation: bob 1.6s var(--step-12) infinite; }
+
+/* --- 8. GLITCH / DIMENSION TEAR ------------------------------- */
+@keyframes tear {
+  0%, 100% { clip-path: inset(0 0 0 0); transform: translate(0); }
+  20% { clip-path: inset(12% 0 40% 0); transform: translate(-6px, 2px); }
+  40% { clip-path: inset(55% 0 8% 0);  transform: translate(5px, -3px); }
+  60% { clip-path: inset(28% 0 55% 0); transform: translate(-3px, 1px); }
+}
+.glitch { animation: tear 0.45s var(--step-12) 1; }
+
+/* Respect users who don't want motion. */
+@media (prefers-reduced-motion: reduce) {
+  .on-twos, .chroma--live, .glitch, .sfx { animation: none !important; }
+}
+
+/* =================================================================
+   PLACEHOLDER CHARACTER RIG — full articulated body, SVG + CSS.
+   Joints are real: each limb rotates about its own pivot, set in
+   viewBox coordinates below. Everything steps at 12fps.
+   ================================================================= */
+
+.hero { overflow: visible; display: block; }
+
+/* view-box transform-box lets us name joint pivots in the SVG's own
+   coordinate space, so origins land exactly on shoulders and hips. */
+.hero__body,
+.hero__torso,
+.hero__head,
+.hero__arm--l,
+.hero__arm--r,
+.hero__leg--l,
+.hero__leg--r,
+.hero__lenses {
+  transform-box: view-box;
+}
+
+.hero__body   { transform-origin: 100px 408px; }  /* feet */
+.hero__torso  { transform-origin: 100px 196px; }  /* hips */
+.hero__head   { transform-origin: 100px 72px;  }  /* neck */
+.hero__arm--l { transform-origin: 72px 88px;   }  /* L shoulder */
+.hero__arm--r { transform-origin: 128px 88px;  }  /* R shoulder */
+.hero__leg--l { transform-origin: 89px 198px;  }  /* L hip */
+.hero__leg--r { transform-origin: 111px 198px; }  /* R hip */
+.hero__lenses { transform-origin: 100px 40px;  }
+
+/* --- IDLE ----------------------------------------------------- */
+@keyframes hero-idle-body {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-5px); }
+}
+@keyframes hero-idle-torso {
+  0%, 100% { transform: rotate(0deg) scaleY(1); }
+  50%      { transform: rotate(1deg) scaleY(1.018); }
+}
+@keyframes hero-idle-head {
+  0%, 100% { transform: rotate(0deg) translateY(0); }
+  50%      { transform: rotate(-1.5deg) translateY(-2px); }
+}
+@keyframes hero-idle-arm-l {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(3.5deg); }
+}
+@keyframes hero-idle-arm-r {
+  0%, 100% { transform: rotate(0deg); }
+  50%      { transform: rotate(-3.5deg); }
+}
+
+.hero__body   { animation: hero-idle-body  2.6s var(--step-12) infinite; }
+.hero__torso  { animation: hero-idle-torso 2.6s var(--step-12) infinite; }
+.hero__head   { animation: hero-idle-head  2.6s var(--step-12) infinite; }
+.hero__arm--l { animation: hero-idle-arm-l 3.1s var(--step-12) infinite; }
+.hero__arm--r { animation: hero-idle-arm-r 3.1s var(--step-12) infinite; }
+
+/* --- BLINK ---------------------------------------------------- */
+@keyframes hero-blink {
+  0%, 93%, 100% { transform: scaleY(1); }
+  96%           { transform: scaleY(0.1); }
+}
+.hero__lenses { animation: hero-blink 5.4s var(--step-12) infinite; }
+
+/* --- TALK ----------------------------------------------------- */
+@keyframes hero-talk-head {
+  0%   { transform: rotate(-2.5deg) translateY(0); }
+  30%  { transform: rotate(2deg) translateY(-3px); }
+  60%  { transform: rotate(-1deg) translateY(-1px); }
+  100% { transform: rotate(-2.5deg) translateY(0); }
+}
+@keyframes hero-talk-arm {
+  0%   { transform: rotate(-6deg); }
+  40%  { transform: rotate(-26deg); }
+  70%  { transform: rotate(-14deg); }
+  100% { transform: rotate(-6deg); }
+}
+.hero--talking .hero__head   { animation: hero-talk-head 0.8s var(--step-12) infinite; }
+.hero--talking .hero__arm--r { animation: hero-talk-arm  0.8s var(--step-12) infinite; }
+
+/* --- CELEBRATE (one-shot) ------------------------------------- */
+@keyframes hero-celeb-body {
+  0%   { transform: translateY(0) scaleY(1); }
+  15%  { transform: translateY(6px) scaleY(0.93); }   /* crouch */
+  40%  { transform: translateY(-38px) scaleY(1.06); } /* launch */
+  65%  { transform: translateY(-14px) scaleY(1); }
+  85%  { transform: translateY(4px) scaleY(0.97); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+@keyframes hero-celeb-arm-l {
+  0%   { transform: rotate(0deg); }
+  40%  { transform: rotate(148deg); }
+  70%  { transform: rotate(132deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes hero-celeb-arm-r {
+  0%   { transform: rotate(0deg); }
+  40%  { transform: rotate(-148deg); }
+  70%  { transform: rotate(-132deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes hero-celeb-lens {
+  0%, 100% { transform: scale(1); }
+  35%      { transform: scale(1.2); }
+}
+.hero--celebrate .hero__body   { animation: hero-celeb-body  0.9s var(--step-12) 1; }
+.hero--celebrate .hero__arm--l { animation: hero-celeb-arm-l 0.9s var(--step-12) 1; }
+.hero--celebrate .hero__arm--r { animation: hero-celeb-arm-r 0.9s var(--step-12) 1; }
+.hero--celebrate .hero__lenses { animation: hero-celeb-lens  0.9s var(--step-12) 1; }
+
+/* --- POINT (one-shot) ----------------------------------------- */
+@keyframes hero-point-arm {
+  0%   { transform: rotate(0deg); }
+  35%  { transform: rotate(-88deg); }
+  75%  { transform: rotate(-82deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes hero-point-torso {
+  0%, 100% { transform: rotate(0deg); }
+  45%      { transform: rotate(5deg); }
+}
+.hero--point .hero__arm--r { animation: hero-point-arm   0.95s var(--step-12) 1; }
+.hero--point .hero__torso  { animation: hero-point-torso 0.95s var(--step-12) 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero__body, .hero__torso, .hero__head,
+  .hero__arm--l, .hero__arm--r, .hero__leg--l, .hero__leg--r,
+  .hero__lenses { animation: none !important; }
+}

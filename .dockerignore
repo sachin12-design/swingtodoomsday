@@ -1,0 +1,15 @@
+node_modules
+dist
+.env*
+!.env.example
+.claude
+.DS_Store
+assets-src
+docs
+Figma*
+gewn
+spidy
+*.mp3
+*.mov
+spider_gwen_sprite_sheet_*.png
+*.tar

@@ -1,0 +1,1046 @@
+/* =================================================================
+   THE CITY — the Figma frame, scrolling.
+   sky (fixed, behind) → skyline art tiled in the track (scrolls 1×,
+   back-fade baked over it) → web-road → year signs + panels on the
+   rooftops → ledge (fixed, in front) → heroes (fixed, Navigator).
+   ================================================================= */
+
+:root {
+  --topbar-h: 66px;
+  --zoom: .4s steps(10, end);   /* the panel pop */
+}
+
+/* --- scroller ------------------------------------------------- */
+.city {
+  position: relative;
+  z-index: 1;
+  height: calc(100vh - var(--topbar-h));
+  min-height: 640px;
+  overflow: hidden;            /* paginated — the camera is scripted */
+  outline: none;
+  touch-action: pan-y;
+}
+.city::-webkit-scrollbar { display: none; }
+.track { position: relative; height: 100%; }
+
+/* --- the skyline art ------------------------------------------ */
+.tiles {
+  position: absolute; left: 0; right: 0; z-index: 0;
+  background-repeat: repeat-x;
+  background-position: 0 bottom;
+}
+/* the back fade from the frame: the low buildings sink toward black */
+.tiles::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(to top,
+    rgba(5,3,16,.92) 0%,
+    rgba(5,3,16,.90) 9%,
+    rgba(5,3,16,.62) 24%,
+    rgba(5,3,16,.22) 40%,
+    rgba(5,3,16,0) 52%);
+}
+
+/* --- intro block ---------------------------------------------- */
+.intro { position: absolute; left: 60px; top: 5vh; z-index: 2; width: 400px; }
+.intro__kicker {
+  margin: 0 0 8px;
+  font-size: 11px; font-weight: 800; letter-spacing: .2em;
+  text-transform: uppercase; color: var(--cyan);
+}
+.intro__title { margin: 0 0 12px; font-size: clamp(48px, 6vw, 72px); color: var(--paper); }
+.intro__sub {
+  margin: 0; max-width: 340px;
+  font-size: 14px; line-height: 1.5; font-weight: 600;
+  color: rgba(244,241,236,.86);
+}
+
+/* --- the web-road --------------------------------------------- */
+.road { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; overflow: visible; }
+.road__under { fill: none; stroke: var(--ink); stroke-width: 9; stroke-linecap: round; opacity: .9; }
+.road__line {
+  fill: none; stroke: var(--yellow); stroke-width: 4;
+  stroke-dasharray: 12 14; stroke-linecap: round;
+  animation: road-flow 1.4s steps(4, end) infinite;
+}
+@keyframes road-flow { to { stroke-dashoffset: -52; } }
+.node__ring { fill: none; stroke: var(--cyan); stroke-width: 2; opacity: .55; }
+.node__pad  { fill: var(--paper); stroke: var(--ink); stroke-width: 3.5; }
+.node__dot  { fill: var(--ink); }
+.node--done .node__pad  { fill: var(--yellow); }
+.node--done .node__ring { stroke: var(--yellow); opacity: .9; }
+
+/* --- a year on a rooftop -------------------------------------- */
+.tower { position: absolute; z-index: 2; width: 0; height: 0; --tilt: -1.5deg; }
+.tower--tilt-r { --tilt: 1.3deg; }
+.tower--open { z-index: 4; }
+
+/* the rooftop deck — sized from the roof the detector found, so the
+   sign, the heroes and the billboard all stand on something */
+.deck {
+  position: absolute; top: 0;
+  left: calc(var(--deck-w, 300px) / -2);
+  width: var(--deck-w, 300px); height: 36px;
+  pointer-events: none;
+}
+/* the building itself — a facade running from the roof down into the
+   city, windows fading out toward the ground fade */
+.deck__building {
+  position: absolute; left: 6px; right: 6px; top: 34px;
+  height: var(--drop, 600px);
+  background:
+    repeating-linear-gradient(90deg, transparent 0 16px, rgba(255,214,0,.09) 16px 22px, transparent 22px 38px),
+    repeating-linear-gradient(180deg, transparent 0 20px, rgba(255,255,255,.05) 20px 26px, transparent 26px 44px),
+    linear-gradient(180deg, #17123F 0%, #0F0B30 45%, #08061C 100%);
+  border-left: 3px solid rgba(0,0,0,.6);
+  border-right: 3px solid rgba(0,0,0,.6);
+  mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, #000 55%, transparent 100%);
+}
+.deck__top {
+  position: absolute; left: 0; right: 0; top: 0; height: 10px;
+  background: #1D1648;
+  border-top: 2px solid rgba(0,229,255,.55);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.45);
+}
+.deck__body {
+  position: absolute; left: 8px; right: 8px; top: 10px; bottom: 0;
+  background: linear-gradient(180deg, #130E36, #07051A);
+  box-shadow: 0 14px 26px rgba(0,0,0,.6);
+}
+.deck__body::after {
+  content: ''; position: absolute; inset: 6px 10px auto 10px; height: 6px;
+  background: repeating-linear-gradient(90deg, rgba(255,214,0,.16) 0 14px, transparent 14px 34px);
+}
+/* the landing pad the web-road arrives at */
+.deck__pad {
+  position: absolute; left: 50%; top: -2px; width: 34px; height: 8px;
+  transform: translateX(-50%); border-radius: 4px;
+  background: var(--paper); border: 2px solid var(--ink);
+}
+.tower--complete .deck__pad { background: var(--yellow); }
+
+/* the roof warms up as you light its titles */
+.tower__glow {
+  position: absolute; left: -150px; top: -110px;
+  width: 300px; height: 220px; border-radius: 50%;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(255,214,0,.6), rgba(255,214,0,0) 68%);
+  opacity: calc(var(--lit) * .9);
+  filter: blur(8px); mix-blend-mode: screen;
+  transition: opacity .4s;
+}
+
+/* the sign, sitting on the roof */
+.tower__sign {
+  position: absolute; bottom: 0; left: 44px;
+  transform: translateX(-50%) rotate(var(--tilt));
+  min-width: 98px; padding: 6px 10px 4px;
+  font: inherit; text-align: center; cursor: pointer;
+  background: var(--paper); color: var(--ink);
+  border: 3px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+  transition: transform .3s steps(6, end), background .2s;
+}
+.tower__sign:hover { transform: translateX(-50%) rotate(var(--tilt)) translateY(-3px); }
+.tower--open .tower__sign,
+.tower--open .tower__sign:hover {
+  transform: translateX(-50%) rotate(var(--tilt)) scale(1.1);
+  cursor: default;
+}
+.tower--complete .tower__sign { background: var(--yellow); }
+.tower__year  { display: block; font-size: 26px; line-height: 1; }
+.tower__count { display: block; margin-top: 2px; font-size: 9px; font-weight: 800; letter-spacing: .14em; color: var(--red); }
+
+/* the movie list — a holographic HUD projected up from the rooftop
+   emitter (heroes + bubble live on the left, so nothing collides) */
+.tower__panel {
+  position: absolute; bottom: 100px; left: 40px;
+  width: 282px;
+  color: var(--paper);
+  background: linear-gradient(180deg, rgba(10, 36, 52, .78), rgba(6, 18, 34, .68));
+  border: 1.5px solid rgba(0, 229, 255, .85);
+  border-radius: 3px;
+  box-shadow:
+    -2px 0 0 rgba(0, 229, 255, .28),
+    2px 0 0 rgba(255, 79, 163, .28),
+    0 0 22px rgba(0, 229, 255, .32),
+    inset 0 0 26px rgba(0, 229, 255, .10);
+  backdrop-filter: blur(2px);
+  transform-origin: 50% 100%;
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+.tower--open .tower__panel {
+  visibility: visible; pointer-events: auto;
+  animation: holo-boot .42s steps(9) both, holo-idle 3.8s steps(14) .42s infinite;
+}
+/* boot: project up, flicker, settle — no physical zoom */
+@keyframes holo-boot {
+  0%   { opacity: 0;   transform: translateY(14px) scaleY(.06); }
+  28%  { opacity: .9;  transform: translateY(2px) scaleY(1.04); }
+  42%  { opacity: .25; transform: translateY(0) scaleY(1); }
+  58%  { opacity: 1;   transform: translate(1.5px, 0); }
+  70%  { opacity: .6;  transform: translate(-1.5px, 0); }
+  100% { opacity: 1;   transform: translate(0, 0); }
+}
+/* idle: a slow hover with the occasional hologram stutter */
+@keyframes holo-idle {
+  0%, 100% { opacity: 1;   transform: translateY(0); }
+  46%      { opacity: 1;   transform: translateY(-4px); }
+  50%      { opacity: .8;  transform: translateY(-4px) translateX(1px); }
+  54%      { opacity: 1;   transform: translateY(-4px); }
+}
+/* scanlines + a sweeping refresh band */
+.tower__panel::before {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(0, 229, 255, .18) 48%, transparent 56%) 0 0 / 100% 340%,
+    repeating-linear-gradient(0deg, rgba(0, 229, 255, .08) 0 1.5px, transparent 1.5px 4.5px);
+  animation: holo-scan 4.5s steps(26) infinite;
+  mix-blend-mode: screen;
+}
+@keyframes holo-scan { to { background-position: 0 -340%, 0 0; } }
+/* opened leftward when the right side would run off-screen */
+.tower--flip .tower__panel { left: auto; right: 40px; }
+.tower--flip .tower__panel::after { left: auto; right: 0; clip-path: polygon(60% 100%, 70% 100%, 94% 0%, 6% 0%); }
+/* the projection beam, rooftop emitter → panel */
+.tower__panel::after {
+  content: ''; position: absolute; top: 100%; left: 0;
+  width: 180px; height: 102px;
+  background: linear-gradient(0deg, rgba(0, 229, 255, .55), rgba(0, 229, 255, .06) 88%);
+  clip-path: polygon(30% 100%, 40% 100%, 94% 0%, 6% 0%);
+  pointer-events: none;
+  opacity: .8;
+}
+.panel__head {
+  display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  height: 44px; padding: 0 12px; box-sizing: border-box;
+  border-bottom: 1.5px solid rgba(0, 229, 255, .6);
+  background: linear-gradient(180deg, rgba(0, 229, 255, .18), rgba(0, 229, 255, .04));
+}
+.panel__title {
+  font-size: 24px; color: var(--paper);
+  text-shadow: 0 0 8px rgba(0, 229, 255, .8), 2px 0 0 rgba(255, 79, 163, .5);
+}
+.panel__meta {
+  font-size: 9.5px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase;
+  color: var(--cyan); text-shadow: 0 0 6px rgba(0, 229, 255, .6);
+}
+.panel__list {
+  list-style: none; margin: 0; padding: 0;
+  max-height: var(--max-h, 320px); overflow-y: auto;
+  scrollbar-width: thin; scrollbar-color: rgba(0, 229, 255, .6) transparent;
+}
+
+.row {
+  display: flex; align-items: center; gap: 8px;
+  height: 32px; padding: 0 10px;
+  border-top: 1px solid rgba(0, 229, 255, .18);
+  font-size: 12px; font-weight: 700;
+  color: rgba(244, 241, 236, .92);
+  cursor: pointer; user-select: none;
+}
+.row:first-child { border-top: none; }
+.row:hover { background: rgba(0, 229, 255, .12); }
+.row:focus-visible { outline: 2px solid var(--cyan); outline-offset: -2px; }
+.row--lit {
+  background: rgba(255, 214, 0, .16); color: var(--yellow);
+  box-shadow: inset 0 0 14px rgba(255, 214, 0, .12);
+  text-shadow: 0 0 7px rgba(255, 214, 0, .45);
+}
+.row--lit:hover { background: rgba(255, 214, 0, .26); }
+.row__tick {
+  flex: none; width: 16px; height: 16px;
+  display: grid; place-items: center;
+  border: 1.5px solid rgba(0, 229, 255, .8); border-radius: 3px;
+  font-size: 11px; font-weight: 900; line-height: 1;
+  color: var(--cyan);
+  box-shadow: 0 0 6px rgba(0, 229, 255, .35);
+}
+.row--lit .row__tick { background: var(--yellow); color: var(--ink); border-color: var(--yellow); box-shadow: 0 0 10px rgba(255, 214, 0, .7); }
+.row__title { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row__span { font-style: normal; font-weight: 600; font-size: 10.5px; opacity: .6; }
+.row__tag {
+  flex: none; padding: 1px 4px;
+  border: 1px solid rgba(0, 229, 255, .7); border-radius: 2px;
+  font-size: 8px; font-weight: 900; letter-spacing: .1em; color: var(--cyan);
+}
+.row__quiz {
+  flex: none; min-width: 22px; height: 22px; padding: 0 6px;
+  font: inherit; font-size: 10px; font-weight: 900;
+  border: 1.5px solid var(--cyan); border-radius: 11px;
+  background: rgba(0, 229, 255, .12); color: var(--cyan);
+  text-shadow: 0 0 5px rgba(0, 229, 255, .6);
+  cursor: pointer;
+}
+.row__quiz:hover { background: var(--cyan); color: var(--ink); text-shadow: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .tower--open .tower__panel { animation: none; opacity: 1; }
+  .tower__panel::before { animation: none; }
+}
+
+/* --- finish, on the last rooftop ------------------------------ */
+.finish { position: absolute; z-index: 2; width: 0; height: 0; }
+.kiosk {
+  position: absolute; left: 0; bottom: 0;
+  transform: translateX(-50%) rotate(-2deg);
+  padding: 12px 18px 10px; text-align: center;
+  background: var(--ink); color: var(--paper);
+  border: 4px solid var(--paper); box-shadow: 8px 8px 0 var(--red);
+}
+.kiosk__kicker { font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; color: var(--cyan); }
+.kiosk__title  { font-size: 40px; line-height: .95; color: var(--paper); }
+.kiosk__sub    { margin-top: 6px; font-size: 12px; font-weight: 800; letter-spacing: .14em; color: var(--yellow); }
+/* the billboard screen — the Doomsday trailer runs up here */
+.kiosk__screen {
+  position: relative; overflow: hidden;
+  margin-top: 10px; width: min(300px, 74vw); aspect-ratio: 16 / 9;
+  background: #000; border: 3px solid var(--paper);
+  box-shadow: 6px 6px 0 var(--red);
+}
+/* taller than 16:9, so the video letterboxes inside it and YouTube's
+   top/bottom overlays land in the bars this box crops away */
+.kiosk__screen iframe {
+  position: absolute; left: 0; top: -64px;
+  width: 100%; height: calc(100% + 128px);
+  border: 0; pointer-events: none;
+}
+
+/* --- hover card: poster + where to watch ---------------------- */
+.hcard {
+  position: fixed; z-index: 70;
+  display: flex; gap: 12px; padding: 10px;
+  background: var(--paper); color: var(--ink);
+  border: 3px solid var(--ink); box-shadow: 6px 6px 0 var(--ink);
+  transform-origin: left center;
+  animation: hcard-pop .22s steps(6, end) both;
+}
+@keyframes hcard-pop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.hcard__poster { flex: none; width: 104px; height: 156px; border: 3px solid var(--ink); overflow: hidden; background: var(--ink); }
+.hcard__poster img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.hcard__ph {
+  position: relative; width: 100%; height: 100%;
+  display: flex; flex-direction: column; justify-content: flex-end; gap: 4px;
+  padding: 8px; box-sizing: border-box;
+  background: linear-gradient(160deg, var(--violet), var(--red));
+  color: var(--paper); text-align: left;
+}
+.hcard__ph .display { font-size: 17px; line-height: 1; }
+.hcard__ph-year { font-size: 10px; font-weight: 800; letter-spacing: .12em; opacity: .85; }
+.hcard__body { display: flex; flex-direction: column; min-width: 0; }
+.hcard__title { font-size: 14px; font-weight: 800; line-height: 1.15; }
+.hcard__meta { margin-top: 3px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; opacity: .7; }
+.hcard__blurb {
+  margin: 8px 0 0; font-size: 11px; line-height: 1.35; opacity: .85;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.hcard__ctas { margin-top: auto; padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.cta {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 7px 10px; text-decoration: none;
+  background: var(--yellow); color: var(--ink);
+  border: 2.5px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+  font-size: 11px; font-weight: 900; letter-spacing: .06em;
+  transition: transform .1s steps(2, end), box-shadow .1s steps(2, end), background .1s;
+}
+.cta:hover { background: var(--cyan); transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.cta img { width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--ink); }
+
+/* --- minimap (level select) ----------------------------------- */
+.minimap {
+  position: fixed; left: 50%; bottom: 10px; z-index: 55;
+  transform: translateX(-50%);
+  display: flex; align-items: flex-end; gap: 4px;
+  padding: 6px 10px 4px;
+  background: rgba(11,11,15,.88);
+  border: 3px solid var(--paper); box-shadow: 4px 4px 0 var(--red);
+  backdrop-filter: blur(6px);
+}
+.mm {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; color: var(--paper);
+}
+.mm__bar {
+  position: relative; width: 14px;
+  height: calc(8px + var(--n) * 3px);
+  border: 2px solid var(--paper); background: rgba(255,255,255,.06);
+  overflow: hidden;
+}
+.mm__fill { position: absolute; left: 0; right: 0; bottom: 0; height: calc(var(--lit) * 100%); background: var(--yellow); }
+.mm__year { font-size: 8.5px; font-weight: 800; opacity: .55; }
+.mm:hover .mm__year, .mm--current .mm__year { opacity: 1; }
+.mm--current .mm__bar { border-color: var(--cyan); box-shadow: 0 0 0 2px var(--cyan); }
+.mm--current .mm__year { color: var(--cyan); }
+.mm--done .mm__bar { border-color: var(--yellow); }
+
+/* --- scroll hint ---------------------------------------------- */
+.hint {
+  position: fixed; left: 50%; bottom: 92px; z-index: 55; transform: translateX(-50%);
+  font-size: 24px; color: var(--yellow);
+  -webkit-text-stroke: 1.5px var(--ink); paint-order: stroke fill;
+  animation: nudge 1s steps(4, end) infinite;
+}
+@keyframes nudge { 50% { transform: translateX(-50%) translateY(-6px); } }
+.hint { animation-name: nudge; }
+
+/* =================================================================
+   HEROES — the pair on the current roof. The group's transform is the
+   roof point (set by the flight loop); wrappers get lean + squash.
+   ================================================================= */
+.heroes { position: absolute; left: 0; top: 0; z-index: 5; width: 0; height: 0; pointer-events: none; will-change: transform; }
+/* the pair stands in a row just left of the sign; widths adapt to
+   whatever each hero renders as (cut-out or sprite-sheet frame) */
+.party { position: absolute; bottom: 0; right: 14px; display: flex; align-items: flex-end; gap: 12px; }
+.hero-wrap { position: relative; flex: none; transform-origin: bottom center; will-change: transform; }
+/* the idle bob pauses while airborne */
+.heroes[data-phase="flight"] .sprite { animation-play-state: paused; }
+.heroes__bubble {
+  position: absolute; right: 80px; bottom: calc(var(--hero-h) + 34px);
+  width: max-content; max-width: 250px; pointer-events: auto;
+}
+.heroes__bubble::after { left: auto; right: 14px; bottom: -16px; border-top-color: var(--ink); }
+/* the billboard opened leftward over the bubble's usual spot: talk
+   from under the roofline instead */
+.heroes--low .heroes__bubble { right: 24px; bottom: auto; top: 16px; }
+.heroes--low .heroes__bubble::after, .heroes--low .heroes__bubble.bubble--you::after {
+  left: auto; right: 26px; bottom: auto; top: -16px;
+  border-top-color: transparent; border-bottom-color: var(--ink);
+}
+/* when YOU talk, the tail points at your wrapper (the left hero) */
+.heroes__bubble.bubble--you::after { right: auto; left: 22px; }
+
+/* web lines, hand → anchor, while swinging */
+.webs { position: absolute; left: 0; top: 0; z-index: 4; pointer-events: none; overflow: visible; }
+.web {
+  fill: none; stroke: var(--paper); stroke-width: 2.5; stroke-linecap: round; opacity: 0;
+}
+.web--follow { stroke: rgba(244,241,236,.8); stroke-width: 2; }
+.web__anchor { fill: var(--paper); stroke: var(--ink); stroke-width: 2; opacity: 0; }
+
+/* a sprite drawn from a sheet: the frame sits feet-down, centred */
+.sheet { position: relative; display: block; }
+.sheet__frame {
+  position: absolute; left: 50%; bottom: 0;
+  transform-origin: bottom center;
+  background-repeat: no-repeat;
+}
+/* zero-size marker on the hand; the flight loop reads its position */
+.sheet__hand { position: absolute; width: 0; height: 0; pointer-events: none; }
+
+/* page-turn buttons */
+.pager {
+  position: fixed; bottom: 86px; z-index: 56;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; cursor: pointer;
+  font-size: 26px; line-height: 1; letter-spacing: .04em;
+  background: var(--paper); color: var(--ink);
+  border: 3px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+  transition: transform .12s steps(3, end), box-shadow .12s steps(3, end);
+}
+.pager span { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; font-weight: 800; letter-spacing: .12em; text-transform: none; }
+.pager--prev { left: 22px; }
+.pager--next { right: 22px; }
+.pager:not(:disabled):hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--red); }
+.pager:disabled { opacity: .35; cursor: default; }
+
+.sprite {
+  display: block; width: auto;
+  transform-origin: bottom center;
+  animation: sprite-idle 2.6s var(--step-12) infinite;
+}
+.hero-wrap--follower .sprite { animation-delay: -1.2s; }
+@keyframes sprite-idle {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+.sprite--talking { animation: sprite-talk .8s var(--step-12) infinite; }
+@keyframes sprite-talk {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30%      { transform: translateY(-4px) rotate(-2deg); }
+  70%      { transform: translateY(-2px) rotate(2deg); }
+}
+.sprite--celebrate { animation: sprite-celebrate .9s var(--step-12) 1; }
+@keyframes sprite-celebrate {
+  0%   { transform: translateY(0) scaleY(1); }
+  15%  { transform: translateY(6px) scaleY(.94); }
+  45%  { transform: translateY(-48px) scaleY(1.05); }
+  75%  { transform: translateY(-8px) scaleY(1); }
+  100% { transform: translateY(0) scaleY(1); }
+}
+.sprite--point { animation: sprite-talk .9s var(--step-12) 1; }
+@media (prefers-reduced-motion: reduce) { .sprite { animation: none !important; } }
+
+/* =================================================================
+   FIXED SKY — behind everything. The gradient from the Figma frame.
+   ================================================================= */
+.px { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.px__sky {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg,
+    #1B1150 0%,
+    #24145E 10%,
+    #2F1A72 20%,
+    #4A2A8E 30%,
+    #6E3FA6 41%,
+    #9450AC 51%,
+    #B45AA8 57%,
+    #C46AA6 62%,
+    #A85A9C 70%,
+    #4A2A6E 85%,
+    #1A1030 100%);
+}
+
+
+/* =================================================================
+   FAST TRACK — the mandatory watchlist: topbar button, panel, stars.
+   ================================================================= */
+
+/* a starred title in a rooftop list */
+.row--key { box-shadow: inset 3px 0 0 var(--cyan); }
+.row__star { flex: none; font-size: 11px; color: var(--cyan); line-height: 1; }
+.row--lit .row__star { color: var(--yellow); }
+.hcard__star { color: var(--cyan); margin-right: 5px; }
+
+/* topbar button */
+.fastbtn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 11px; cursor: pointer; font: inherit;
+  background: var(--ink); color: var(--paper);
+  border: 3px solid var(--paper); box-shadow: 3px 3px 0 var(--cyan);
+  transition: transform .1s steps(2, end), box-shadow .1s steps(2, end);
+}
+.fastbtn:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--cyan); }
+.fastbtn__star { color: var(--cyan); font-size: 13px; line-height: 1; }
+.fastbtn__n { font-size: 13px; font-weight: 900; letter-spacing: .04em; }
+.fastbtn__label { font-size: 10px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; opacity: .75; }
+.fastbtn--done { box-shadow: 3px 3px 0 var(--yellow); }
+.fastbtn--done .fastbtn__star { color: var(--yellow); }
+@media (max-width: 1100px) { .fastbtn__label { display: none; } }
+
+/* the panel */
+.ft {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: center; padding: 24px;
+  background: rgba(5, 3, 16, .76); backdrop-filter: blur(3px);
+}
+.ft__panel {
+  width: min(680px, 100%); max-height: calc(100vh - 48px);
+  display: flex; flex-direction: column;
+  background: var(--paper); color: var(--ink);
+  border: 4px solid var(--ink); box-shadow: 10px 10px 0 var(--ink);
+}
+.ft__head {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px;
+  padding: 14px 16px 12px; background: var(--yellow);
+  border-bottom: 3px solid var(--ink);
+}
+.ft__kicker { font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--red); }
+.ft__title { font-size: 34px; line-height: 1; margin-top: 2px; }
+.ft__score { display: flex; align-items: center; gap: 12px; }
+.ft__score-n { font-size: 26px; line-height: 1; }
+.ft__close {
+  width: 30px; height: 30px; font: inherit; font-size: 14px; font-weight: 900; cursor: pointer;
+  background: var(--paper); color: var(--ink);
+  border: 3px solid var(--ink); box-shadow: 2px 2px 0 var(--ink);
+}
+.ft__close:hover { background: var(--red); color: var(--paper); }
+.ft__bar { height: 8px; background: rgba(11,11,15,.12); border-bottom: 3px solid var(--ink); }
+.ft__bar-fill { height: 100%; background: var(--red); transition: width .3s steps(8, end); }
+
+.ft__list { list-style: none; margin: 0; padding: 0; overflow-y: auto; }
+.ft__row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 14px; border-bottom: 2px solid rgba(11,11,15,.1);
+}
+.ft__row--lit { background: #FFF6C2; }
+.ft__tick {
+  flex: none; width: 26px; height: 26px; cursor: pointer;
+  font: inherit; font-size: 11px; font-weight: 900; line-height: 1;
+  background: var(--paper); color: var(--ink);
+  border: 2.5px solid var(--ink); border-radius: 50%;
+}
+.ft__tick:hover { background: var(--cyan); }
+.ft__row--lit .ft__tick { background: var(--ink); color: var(--yellow); }
+.ft__name {
+  flex: 1; min-width: 0; text-align: left; cursor: pointer;
+  font: inherit; font-size: 13.5px; font-weight: 800;
+  background: none; border: 0; padding: 2px 0; color: inherit;
+}
+.ft__name:hover { text-decoration: underline; }
+.ft__year { font-style: normal; font-weight: 600; font-size: 11px; opacity: .6; }
+.ft__links { flex: none; display: flex; gap: 6px; }
+.cta--sm { padding: 5px 8px; font-size: 10px; box-shadow: 2px 2px 0 var(--ink); }
+.ft__note {
+  margin: 0; padding: 11px 16px; font-size: 11.5px; line-height: 1.45;
+  background: var(--ink); color: rgba(244,241,236,.85);
+}
+@media (max-width: 620px) {
+  .ft__row { flex-wrap: wrap; }
+  .ft__links { width: 100%; padding-left: 36px; }
+}
+
+/* =================================================================
+   DIMENSIONAL PORTALS — for very-far jumps. The flight loop owns
+   each portal's translate/scale; the innards idle on stepped clocks.
+   ================================================================= */
+.portal {
+  position: absolute; left: 0; top: 0; z-index: 4;
+  width: 0; height: 0; pointer-events: none; opacity: 0;
+  will-change: transform;
+}
+.portal svg { position: absolute; left: -140px; top: -140px; overflow: visible; }
+/* the exit portal lies flat above the roof */
+.portal--out svg { transform: scaleY(.34); }
+/* the entry portal stands at a 3/4 angle, tilted toward the runners;
+   the flight loop sets data-dir so the tilt mirrors with travel */
+.portal--in svg { transform: rotate(-8deg) scaleX(.52); }
+.portal--in[data-dir="left"] svg { transform: rotate(8deg) scaleX(-.52); }
+
+.portal__ringsA, .portal__ringsB, .portal__shell, .portal__dash, .portal__dot {
+  transform-box: fill-box; transform-origin: center;
+}
+.portal__ringsA { animation: pspin 5.5s steps(33) infinite; }
+.portal__ringsB { animation: pspin-rev 7.5s steps(33) infinite; }
+.portal__shell  { animation: pspin-rev 13s steps(39) infinite; }
+@keyframes pspin { to { transform: rotate(360deg); } }
+@keyframes pspin-rev { to { transform: rotate(-360deg); } }
+
+.portal__dash { animation: pdash 1.1s steps(6) infinite; }
+@keyframes pdash { to { stroke-dashoffset: -54; } }
+
+.portal__spark { animation: pflick .8s steps(2) infinite; }
+.portal__spark:nth-of-type(2n) { animation-delay: .27s; }
+.portal__spark:nth-of-type(3n) { animation-delay: .53s; }
+@keyframes pflick { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
+
+.portal__dot { animation: pbob 1.9s steps(7) infinite alternate; }
+.portal__dot:nth-of-type(2n) { animation-delay: .6s; }
+@keyframes pbob { to { transform: translateY(-7px); } }
+
+/* superhero-landing shockwave */
+.shock { position: absolute; left: 0; top: 0; z-index: 5; width: 0; height: 0; pointer-events: none; }
+.shock::before {
+  content: ''; position: absolute; left: -42px; top: -13px;
+  width: 84px; height: 26px; border-radius: 50%;
+  border: 4px solid var(--paper); opacity: 0;
+}
+.shock--go::before { animation: shock-out .5s steps(7) both; }
+@keyframes shock-out {
+  0% { transform: scale(.2); opacity: .95; }
+  100% { transform: scale(2.7); opacity: 0; }
+}
+
+/* =================================================================
+   TOPBAR V2 — the holo theme. Overrides the paper-chip originals.
+   ================================================================= */
+.topbar {
+  background: linear-gradient(180deg, rgba(5, 10, 22, .94), rgba(6, 14, 28, .8));
+  border-bottom: 1.5px solid rgba(0, 229, 255, .65);
+  box-shadow: 0 1px 22px rgba(0, 229, 255, .22);
+  backdrop-filter: blur(9px);
+}
+.brand { text-shadow: 2.5px 0 0 var(--red), -2.5px 0 0 var(--cyan), 0 0 14px rgba(0, 229, 255, .45); }
+
+.clock__unit {
+  background: rgba(7, 19, 33, .72); color: var(--paper);
+  border: 1.5px solid rgba(0, 229, 255, .55); border-radius: 4px;
+  box-shadow: 0 0 10px rgba(0, 229, 255, .16), inset 0 0 8px rgba(0, 229, 255, .08);
+}
+.clock__num { color: var(--red); text-shadow: 0 0 9px rgba(255, 23, 68, .75); }
+.clock__den { color: var(--cyan); opacity: .9; text-shadow: 0 0 6px rgba(0, 229, 255, .5); }
+.clock__label { color: var(--red); text-shadow: 0 0 8px rgba(255, 23, 68, .6); }
+
+.mute {
+  border: 1.5px solid rgba(0, 229, 255, .55); border-radius: 4px;
+  background: rgba(7, 19, 33, .72);
+  box-shadow: 0 0 10px rgba(0, 229, 255, .16);
+}
+.mute:hover { background: rgba(0, 229, 255, .14); }
+
+.progress__label { color: var(--cyan); text-shadow: 0 0 6px rgba(0, 229, 255, .5); }
+.progress__bar {
+  border: 1.5px solid rgba(0, 229, 255, .55); border-radius: 3px;
+  background: rgba(7, 19, 33, .7);
+  box-shadow: inset 0 0 8px rgba(0, 229, 255, .1);
+}
+.progress__fill { background: linear-gradient(90deg, var(--cyan), var(--yellow)); box-shadow: 0 0 10px rgba(255, 214, 0, .5); }
+
+.fastbtn {
+  background: rgba(7, 19, 33, .72);
+  border: 1.5px solid rgba(0, 229, 255, .7); border-radius: 4px;
+  box-shadow: 0 0 12px rgba(0, 229, 255, .22), inset 0 0 8px rgba(0, 229, 255, .08);
+}
+.fastbtn:hover { transform: none; background: rgba(0, 229, 255, .14); box-shadow: 0 0 18px rgba(0, 229, 255, .4); }
+.fastbtn__star { text-shadow: 0 0 8px rgba(0, 229, 255, .8); }
+.fastbtn--done { border-color: rgba(255, 214, 0, .8); box-shadow: 0 0 14px rgba(255, 214, 0, .35); }
+
+/* account chip */
+.acct {
+  width: 40px; height: 40px; margin-right: 6px;
+  font-family: 'Bangers', Impact, sans-serif; font-size: 18px; line-height: 1;
+  color: var(--cyan); cursor: pointer;
+  background: rgba(7, 19, 33, .72);
+  border: 1.5px solid rgba(0, 229, 255, .55); border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 229, 255, .16);
+  text-shadow: 0 0 7px rgba(0, 229, 255, .6);
+}
+.acct:hover { background: rgba(255, 23, 68, .18); border-color: rgba(255, 23, 68, .7); color: var(--paper); }
+
+/* =================================================================
+   HOVER CARD V2 — the movie pop box as a hologram.
+   ================================================================= */
+.hcard {
+  background: linear-gradient(180deg, rgba(10, 36, 52, .88), rgba(6, 18, 34, .8));
+  color: var(--paper);
+  border: 1.5px solid rgba(0, 229, 255, .85); border-radius: 3px;
+  box-shadow:
+    -2px 0 0 rgba(0, 229, 255, .28),
+    2px 0 0 rgba(255, 79, 163, .28),
+    0 0 24px rgba(0, 229, 255, .3),
+    inset 0 0 24px rgba(0, 229, 255, .08);
+  backdrop-filter: blur(3px);
+  animation: holo-pop .3s steps(7) both;
+}
+@keyframes holo-pop {
+  0%   { opacity: 0; transform: translateX(-8px) scaleX(.6); }
+  40%  { opacity: .9; transform: translateX(1px) scaleX(1.02); }
+  60%  { opacity: .4; }
+  100% { opacity: 1; transform: none; }
+}
+.hcard::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: 2px;
+  background: repeating-linear-gradient(0deg, rgba(0, 229, 255, .07) 0 1.5px, transparent 1.5px 4.5px);
+  mix-blend-mode: screen;
+}
+.hcard__poster { border: 1.5px solid rgba(0, 229, 255, .7); box-shadow: 0 0 12px rgba(0, 229, 255, .25); background: #061222; }
+.hcard__title { color: var(--paper); text-shadow: 0 0 7px rgba(0, 229, 255, .6); }
+.hcard__meta { color: var(--cyan); opacity: 1; text-shadow: 0 0 5px rgba(0, 229, 255, .45); }
+.hcard__blurb { color: rgba(244, 241, 236, .82); opacity: 1; }
+.hcard .cta {
+  background: rgba(0, 229, 255, .14); color: var(--cyan);
+  border: 1.5px solid var(--cyan); box-shadow: 0 0 10px rgba(0, 229, 255, .25);
+  text-shadow: 0 0 5px rgba(0, 229, 255, .5);
+}
+.hcard .cta:hover { background: var(--cyan); color: var(--ink); text-shadow: none; transform: none; box-shadow: 0 0 16px rgba(0, 229, 255, .6); }
+
+/* =================================================================
+   LOGIN + ONBOARDING
+   ================================================================= */
+.login {
+  position: relative; min-height: 100vh;
+  display: grid; place-items: center; padding: 24px;
+  background:
+    radial-gradient(ellipse at 70% 15%, rgba(124, 77, 255, .35), transparent 55%),
+    linear-gradient(180deg, #0A0A13 0%, #1A1340 55%, #3A1A4F 100%);
+}
+.login__card {
+  width: min(430px, 100%);
+  padding: 30px 30px 26px;
+  display: flex; flex-direction: column; gap: 13px;
+  background: linear-gradient(180deg, rgba(10, 36, 52, .82), rgba(6, 18, 34, .74));
+  border: 1.5px solid rgba(0, 229, 255, .85); border-radius: 4px;
+  box-shadow:
+    -2px 0 0 rgba(0, 229, 255, .25), 2px 0 0 rgba(255, 79, 163, .25),
+    0 0 34px rgba(0, 229, 255, .28), inset 0 0 30px rgba(0, 229, 255, .08);
+}
+.login__kicker { font-size: 10px; font-weight: 800; letter-spacing: .22em; text-transform: uppercase; color: var(--cyan); text-shadow: 0 0 6px rgba(0, 229, 255, .5); }
+.login__brand { font-size: clamp(34px, 7vw, 56px); line-height: .92; color: var(--paper); margin: 0; }
+.login__tag { margin: 0 0 8px; font-size: 13.5px; font-weight: 600; color: rgba(244, 241, 236, .85); }
+.login__btn {
+  padding: 11px 14px; font: inherit; font-size: 13px; font-weight: 800; letter-spacing: .04em;
+  color: var(--cyan); background: rgba(0, 229, 255, .12);
+  border: 1.5px solid var(--cyan); border-radius: 4px; cursor: pointer;
+  text-shadow: 0 0 5px rgba(0, 229, 255, .5);
+}
+.login__btn:hover:not(:disabled) { background: var(--cyan); color: var(--ink); text-shadow: none; }
+.login__btn:disabled { opacity: .35; cursor: not-allowed; }
+.login__btn--primary { font-size: 14px; }
+.login__row { display: flex; gap: 8px; }
+.login__input {
+  flex: 1; min-width: 0; padding: 10px 12px; font: inherit; font-size: 13px;
+  color: var(--paper); background: rgba(7, 19, 33, .8);
+  border: 1.5px solid rgba(0, 229, 255, .45); border-radius: 4px;
+}
+.login__input::placeholder { color: rgba(244, 241, 236, .4); }
+.login__input:focus { outline: none; border-color: var(--cyan); box-shadow: 0 0 10px rgba(0, 229, 255, .3); }
+.login__msg { margin: 0; font-size: 12px; font-weight: 700; color: var(--yellow); }
+.login__hint { margin: 0; font-size: 11.5px; line-height: 1.45; color: rgba(244, 241, 236, .6); }
+.login__guest {
+  margin-top: 6px; padding: 12px; font: inherit; font-size: 13.5px; font-weight: 900; letter-spacing: .05em;
+  background: var(--yellow); color: var(--ink);
+  border: 2.5px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); border-radius: 3px; cursor: pointer;
+  transition: transform .1s steps(2, end), box-shadow .1s steps(2, end);
+}
+.login__guest:hover { transform: translate(-1px, -1px); box-shadow: 6px 6px 0 var(--ink); }
+
+.ob {
+  position: fixed; inset: 0; z-index: 95;
+  display: grid; place-items: center; padding: 24px;
+  background: rgba(5, 3, 16, .7); backdrop-filter: blur(3px);
+}
+.ob__card {
+  position: relative; width: min(420px, 100%);
+  padding: 26px 26px 20px;
+  background: linear-gradient(180deg, rgba(10, 36, 52, .92), rgba(6, 18, 34, .86));
+  border: 1.5px solid rgba(0, 229, 255, .85); border-radius: 4px;
+  box-shadow: -2px 0 0 rgba(0, 229, 255, .25), 2px 0 0 rgba(255, 79, 163, .25), 0 0 30px rgba(0, 229, 255, .3);
+  color: var(--paper);
+  animation: holo-pop .3s steps(7) both;
+}
+.ob__skip {
+  position: absolute; top: 10px; right: 12px;
+  font: inherit; font-size: 11px; font-weight: 800; letter-spacing: .08em;
+  background: none; border: 0; color: rgba(244, 241, 236, .55); cursor: pointer;
+}
+.ob__skip:hover { color: var(--paper); }
+.ob__icon { font-size: 34px; line-height: 1; margin-bottom: 8px; filter: drop-shadow(0 0 8px rgba(0, 229, 255, .5)); }
+.ob__title { font-size: 30px; margin: 0 0 8px; color: var(--paper); text-shadow: 0 0 8px rgba(0, 229, 255, .6); }
+.ob__body { margin: 0 0 18px; font-size: 13.5px; line-height: 1.55; color: rgba(244, 241, 236, .88); }
+.ob__foot { display: flex; align-items: center; justify-content: space-between; }
+.ob__dots { display: flex; gap: 6px; }
+.ob__dot { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--cyan); opacity: .45; }
+.ob__dot--on { background: var(--cyan); opacity: 1; box-shadow: 0 0 8px rgba(0, 229, 255, .7); }
+.ob__next {
+  padding: 9px 16px; font: inherit; font-size: 13px; font-weight: 900;
+  background: var(--yellow); color: var(--ink);
+  border: 2.5px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); border-radius: 3px; cursor: pointer;
+}
+.ob__next:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+
+/* =================================================================
+   DIMENSIONS — solo mode, the world chip, and the pink city.
+   ================================================================= */
+.heroes--solo .hero-wrap--leader { display: none; }
+
+.worldbtn {
+  display: flex; align-items: center; gap: 7px;
+  padding: 6px 11px; cursor: pointer; font: inherit;
+  color: var(--paper);
+  background: rgba(7, 19, 33, .72);
+  border: 1.5px solid rgba(255, 79, 163, .65); border-radius: 4px;
+  box-shadow: 0 0 12px rgba(255, 79, 163, .22), inset 0 0 8px rgba(255, 79, 163, .08);
+}
+.worldbtn:hover:not(:disabled) { background: rgba(255, 79, 163, .16); box-shadow: 0 0 18px rgba(255, 79, 163, .4); }
+.worldbtn:disabled { opacity: .55; cursor: wait; }
+.worldbtn__icon { color: #FF7AD9; font-size: 14px; line-height: 1; text-shadow: 0 0 8px rgba(255, 122, 217, .8); }
+.worldbtn--busy .worldbtn__icon { animation: pspin 1.2s steps(8) infinite; display: inline-block; }
+.worldbtn__label { font-size: 12px; font-weight: 900; letter-spacing: .06em; }
+@media (max-width: 1100px) { .worldbtn__label { font-size: 10px; } }
+
+
+
+/* =================================================================
+   FILTER CONTROL + THE GOLDEN DIMENSION'S OWN BUILDINGS
+   ================================================================= */
+.fastwrap { display: flex; align-items: stretch; }
+.fastwrap .fastbtn { border-radius: 4px 0 0 4px; }
+.fastlist {
+  width: 34px; font: inherit; font-size: 15px; line-height: 1; cursor: pointer;
+  color: var(--cyan); background: rgba(7, 19, 33, .72);
+  border: 1.5px solid rgba(0, 229, 255, .7); border-left: none;
+  border-radius: 0 4px 4px 0;
+  box-shadow: 0 0 12px rgba(0, 229, 255, .18);
+  text-shadow: 0 0 6px rgba(0, 229, 255, .5);
+}
+.fastlist:hover { background: rgba(0, 229, 255, .16); }
+.fastbtn--on {
+  border-color: rgba(255, 214, 0, .85);
+  box-shadow: 0 0 16px rgba(255, 214, 0, .4), inset 0 0 10px rgba(255, 214, 0, .12);
+}
+.fastbtn--on .fastbtn__star, .fastbtn--on .fastbtn__label { color: var(--yellow); text-shadow: 0 0 8px rgba(255, 214, 0, .7); }
+.fastbtn--busy .fastbtn__star { display: inline-block; animation: pspin 1.2s steps(8) infinite; }
+
+/* the pink dimension: gameplay buildings match the Gwen city */
+.app--pink .deck__top {
+  background: #5B2F7A;
+  border-top-color: rgba(255, 160, 225, .75);
+}
+.app--pink .deck__pad { background: #FFE3F6; }
+.app--pink .deck__body { background: linear-gradient(180deg, #42215C, #241036); }
+.app--pink .deck__body::after {
+  background: repeating-linear-gradient(90deg, rgba(255, 150, 220, .28) 0 14px, transparent 14px 34px);
+}
+.app--pink .deck__building {
+  background:
+    repeating-linear-gradient(90deg, transparent 0 16px, rgba(255, 150, 220, .14) 16px 22px, transparent 22px 38px),
+    repeating-linear-gradient(180deg, transparent 0 20px, rgba(255, 220, 245, .07) 20px 26px, transparent 26px 44px),
+    linear-gradient(180deg, #4A2766 0%, #2E1545 45%, #180A28 100%);
+  border-left-color: rgba(40, 16, 60, .75);
+  border-right-color: rgba(40, 16, 60, .75);
+}
+.app--pink .tiles::after {
+  background: linear-gradient(to top,
+    #1E0F33 0%,
+    rgba(30, 15, 51, .94) 10%,
+    rgba(30, 15, 51, .62) 30%,
+    rgba(30, 15, 51, .2) 52%,
+    rgba(30, 15, 51, 0) 72%);
+}
+
+
+
+/* --- the pink dimension (world: all) — from the reference frame ---- */
+.px__sky--pink {
+  background: linear-gradient(180deg,
+    #6E3EA4 0%,
+    #8349B4 12%,
+    #A157C0 24%,
+    #C468C6 36%,
+    #E283CF 48%,
+    #F4ABDF 58%,
+    #FBD7EE 68%,
+    #FFF4FB 78%,
+    #F6D4EC 100%);
+}
+/* the bright haze at the horizon, behind the far towers, like the frame */
+.px__glow {
+  position: absolute; inset: 0;
+  background: radial-gradient(ellipse 58% 34% at 50% 52%, rgba(255, 251, 254, .95), rgba(255, 238, 250, .5) 52%, rgba(255, 238, 250, 0) 78%);
+}
+/* a pale far copy of the same city, for depth */
+.px__far--pink {
+  position: absolute; left: 0; right: 0; bottom: 26%;
+  height: 46%;
+  background-repeat: repeat-x;
+  background-size: auto 100%;
+  background-position: calc(var(--sx, 0) * -0.07px) bottom;
+  opacity: .55;
+  filter: brightness(1.28) saturate(.85);
+}
+/* intro copy over the purple top-left */
+.app--pink .intro__kicker { color: #FFE3F6; text-shadow: 0 0 6px rgba(255, 180, 230, .6); }
+.app--pink .intro__sub { color: rgba(255, 244, 252, .92); }
+.app--pink .intro__title { text-shadow: 3px 3px 0 rgba(70, 25, 105, .55); }
+
+
+/* --- landing dust — a puff where the feet hit the roof ----------- */
+.dust { position: absolute; left: 0; top: 0; opacity: 0; pointer-events: none; z-index: 4; }
+.dust--go { opacity: 1; }
+.dust::before, .dust::after { content: ''; position: absolute; opacity: 0; }
+.dust::before {
+  left: -27px; top: -10px; width: 54px; height: 15px; border-radius: 50%;
+  background: radial-gradient(ellipse at 50% 60%, rgba(255, 255, 255, .8), rgba(255, 255, 255, 0) 68%);
+}
+.dust::after {
+  left: -2px; top: -5px; width: 4px; height: 4px; border-radius: 50%; background: #FFF;
+  box-shadow: -19px -5px 0 -1px #FFF, 17px -7px 0 -1px #FFF, -29px -1px 0 -2px #FFF,
+    27px -2px 0 -2px #FFF, 7px -11px 0 -2px #FFF, -8px -13px 0 -2px #FFF;
+}
+.dust--go::before { animation: dust-puff .4s steps(4) both; }
+.dust--go::after { animation: dust-bits .46s steps(4) both; }
+@keyframes dust-puff { 0% { opacity: .9; transform: scale(.3, .5); } 100% { opacity: 0; transform: scale(1.7, 1); } }
+@keyframes dust-bits { 0% { opacity: .95; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-12px) scale(1.4); } }
+
+/* --- comic speed-lines while airborne ----------------------------- */
+.hero-wrap::before {
+  content: ''; position: absolute; top: 16%; height: 52%;
+  width: 150%; opacity: 0; pointer-events: none; z-index: -1;
+  background: repeating-linear-gradient(180deg,
+    transparent 0 6px, rgba(255, 255, 255, .6) 6px 8px, transparent 8px 15px,
+    rgba(255, 255, 255, .35) 15px 16.5px, transparent 16.5px 24px);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 40%, #000 60%, transparent);
+}
+.hero-wrap[data-move="swing"]::before { opacity: .55; animation: fx-streak .22s steps(3) infinite; }
+.hero-wrap[data-phase="air"]::before { opacity: .4; animation: fx-streak .26s steps(3) infinite; }
+.hero-wrap[data-dir="right"]::before { right: 55%; }
+.hero-wrap[data-dir="left"]::before { left: 55%; }
+.hero-wrap[data-dir="left"][data-move="swing"]::before, .hero-wrap[data-dir="left"][data-phase="air"]::before { animation-name: fx-streak-l; }
+@keyframes fx-streak { to { transform: translateX(-16px); } }
+@keyframes fx-streak-l { to { transform: translateX(16px); } }
+
+
+/* --- the spidey tracker — pixel sticker under the Doomsday clock -- */
+.tracker {
+  position: fixed; top: calc(var(--topbar-h, 66px) + 14px); right: 16px; z-index: 40;
+  width: 92px; padding: 0; background: none; border: none; cursor: pointer;
+  filter: drop-shadow(4px 5px 0 rgba(8, 6, 12, .5));
+  transition: transform .14s steps(3);
+  animation: tracker-in .45s steps(5) both;
+}
+@keyframes tracker-in { from { opacity: 0; transform: translateY(-18px) rotate(4deg); } }
+.tracker:hover { transform: translateY(-3px) rotate(-2deg); }
+.tracker:active { transform: translateY(0) scale(.96); }
+.tracker--busy { pointer-events: none; filter: drop-shadow(4px 5px 0 rgba(8, 6, 12, .5)) saturate(.4) brightness(.85); }
+.tracker svg { display: block; width: 100%; }
+
+/* the pixel blink: red eyelids flash over the whites on a timer */
+.tracker__lids { opacity: 0; }
+.tracker:not(.tracker--busy) .tracker__lids { animation: spidey-blink 4.4s infinite; }
+.tracker:hover .tracker__lids { animation-duration: 1.6s; }
+@keyframes spidey-blink {
+  0% { opacity: 0; }
+  87.9% { opacity: 0; }
+  88% { opacity: 1; }
+  94.9% { opacity: 1; }
+  95% { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+.tracker__chip {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  margin: -7px auto 0; width: fit-content; padding: 2px 9px 1px;
+  position: relative; z-index: 1;
+  background: var(--ink); color: var(--paper);
+  border: 2px solid var(--paper); box-shadow: 2.5px 2.5px 0 rgba(8, 6, 12, .6);
+  font-size: 9.5px; font-weight: 800; letter-spacing: .14em;
+}
+.tracker__chip .display { font-size: 13px; letter-spacing: .04em; }
+.tracker--on .tracker__chip { background: #13203B; border-color: #FFC43D; color: #FFE9AE; }
+.tracker--done .tracker__chip { border-color: #FFC43D; color: #FFC43D; }
+@media (max-width: 700px) { .tracker { width: 74px; } }
+
+
+/* --- the guide bobbing half-out of the summon portal --------------- */
+/* (animates `translate`, not `transform` — the lean out of the ring
+   is an inline transform on the same element) */
+.hero-wrap--peek .sheet { animation: peek-bob 1.7s steps(3) infinite; }
+@keyframes peek-bob {
+  0%, 100% { translate: 0 0; }
+  50% { translate: 0 -6px; }
+}
+
+/* --- phones ---------------------------------------------------------- */
+@media (max-width: 640px) {
+  .tracker { width: 62px; top: 64px; right: 10px; }
+  /* bubbles hang to the RIGHT of the speaker on phones — the left
+     edge of the screen was eating them */
+  /* under the roofline on phones — the billboard owns the sky */
+  .heroes__bubble { right: auto; left: -34px; bottom: auto; top: 16px; max-width: 58vw; }
+  .heroes__bubble::after, .heroes__bubble.bubble--you::after {
+    right: auto; left: 22px; bottom: auto; top: -16px;
+    border-top-color: transparent; border-bottom-color: var(--ink);
+  }
+  .tracker__chip { font-size: 8px; padding: 1px 6px 0; border-width: 1.5px; gap: 4px; }
+  .tracker__chip .display { font-size: 11px; }
+  .intro { left: 18px; width: min(400px, 86vw); }
+  /* the billboard spans the screen, whatever the roof's position — and
+     floats above the heroes' heads, since it now spans them too (the
+     list gives back that height, plus room for the tracker sticker) */
+  .tower__panel {
+    left: calc(12px - var(--roof-sx, 0px)); right: auto;
+    width: calc(100vw - 96px); /* ends short of the tracker sticker's column */
+    bottom: calc(var(--hero-h, 121px) + 34px);
+  }
+  .tower__panel .panel__list { max-height: max(96px, calc(var(--max-h, 320px) - 124px)); }
+  .tower__panel::after { height: calc(var(--hero-h, 121px) + 36px); }
+  .tower__panel::after { left: calc(var(--roof-sx, 0px) - 82px); right: auto; clip-path: polygon(30% 100%, 40% 100%, 94% 0%, 6% 0%); }
+  .hcard { max-width: calc(100vw - 28px); }
+  .heroes__bubble { max-width: 58vw; }
+  .pager { padding: 8px 10px; }
+  .pager--prev { left: 10px; }
+  .pager--next { right: 10px; }
+  .minimap { transform: translateX(-50%) scale(.8); transform-origin: bottom center; bottom: 6px; }
+}
+@media (max-width: 420px) {
+  /* 27 years of minimap must fit a phone */
+  .minimap { transform: translateX(-50%) scale(.72); }
+  .ft { padding: 14px; }
+  .ft__panel { box-shadow: 6px 6px 0 var(--ink); max-height: calc(100vh - 28px); }
+  .login { padding: 14px; }
+  .login__card { width: 100%; max-width: 420px; }
+  .login__brand { font-size: clamp(30px, 11vw, 46px); }
+  .ob { padding: 14px; }
+  .ob__card { width: 100%; max-width: 440px; }
+  .kiosk__screen { box-shadow: 4px 4px 0 var(--red); }
+}
